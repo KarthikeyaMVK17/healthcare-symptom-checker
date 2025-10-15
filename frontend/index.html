@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Healthcare Symptom Checker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>🩺 Symptom Checker AI</h1>
+    <div class="header-buttons">
+      <button id="history-btn">🕒 History</button>
+      <button id="theme-toggle">🌙</button>
+    </div>
+  </header>
+
+  <div id="overlay"></div>
+
+  <aside id="sidebar" class="hidden">
+    <h2>Recent Queries</h2>
+    <ul id="history-list"><li>Loading...</li></ul>
+  </aside>
+
+  <main>
+    <p class="disclaimer">
+      ⚠️ Educational use only — not a substitute for professional medical advice.
+    </p>
+
+    <form id="symptom-form">
+      <textarea id="symptoms" placeholder="Describe your symptoms..." required></textarea>
+      <div class="inputs">
+        <input type="number" id="age" placeholder="Age (optional)" />
+        <label><input type="checkbox" id="pregnant" /> Pregnant</label>
+      </div>
+      <button type="submit" id="analyze-btn">Analyze</button>
+    </form>
+
+    <section id="result"></section>
+  </main>
+
+  <footer>
+    <p>💡 Built for learning — © 2025 Symptom Checker AI</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
