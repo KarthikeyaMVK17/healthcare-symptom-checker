@@ -1,3 +1,9 @@
+const BASE_URL =
+  window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : "";
+
+// Element references
 const resultEl = document.getElementById("result");
 const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("overlay");
@@ -31,11 +37,11 @@ overlay.addEventListener("click", () => {
 // 🧾 LOAD HISTORY
 async function loadHistory() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/history");
+    const res = await fetch(`${BASE_URL}/history`);
     const data = await res.json();
     historyList.innerHTML = "";
 
-    if (!data.history.length) {
+    if (!data.history || !data.history.length) {
       historyList.innerHTML = "<li>No previous queries</li>";
       return;
     }
@@ -70,11 +76,13 @@ document.getElementById("symptom-form").addEventListener("submit", async (e) => 
   resultEl.innerHTML = "<p class='loading'>⏳ Analyzing your symptoms...</p>";
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/analyze", {
+    const response = await fetch(`${BASE_URL}/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms, age, pregnant }),
     });
+
+    if (!response.ok) throw new Error(`Error: ${response.status}`);
     const data = await response.json();
     typeResult(data);
     loadHistory();
@@ -89,7 +97,7 @@ document.getElementById("symptom-form").addEventListener("submit", async (e) => 
 // 🧾 LOAD SAVED RESULT
 async function loadResultById(queryId) {
   try {
-    const res = await fetch("http://127.0.0.1:8000/history");
+    const res = await fetch(`${BASE_URL}/history`);
     const data = await res.json();
     const record = data.history.find((r) => r.query_id === queryId);
     if (!record || !record.model_response) {
@@ -107,7 +115,7 @@ function typeResult(data) {
   const html = buildResultHTML(data);
   resultEl.innerHTML = "";
   let i = 0;
-  const speed = 8; // smaller = faster
+  const speed = 8;
   const tempDiv = document.createElement("div");
 
   const timer = setInterval(() => {
@@ -130,7 +138,6 @@ function buildResultHTML(data) {
       (c) => `
       <div class="condition">
         <h3>${c.name}</h3>
-        <div class="confidence-bar ${c.confidence?.toLowerCase()}"><div></div></div>
         <p><b>Confidence:</b> ${c.confidence}</p>
         <p>${c.rationale}</p>
       </div>`
@@ -158,9 +165,7 @@ function buildResultHTML(data) {
 clearBtn.addEventListener("click", async () => {
   if (!confirm("Are you sure you want to clear all history?")) return;
   try {
-    const res = await fetch("http://127.0.0.1:8000/history/clear", {
-      method: "DELETE",
-    });
+    const res = await fetch(`${BASE_URL}/history/clear`, { method: "DELETE" });
     const data = await res.json();
     alert(data.message || "History cleared!");
     loadHistory();
