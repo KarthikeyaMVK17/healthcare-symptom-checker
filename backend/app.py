@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlmodel import SQLModel, Session, create_engine, select, delete
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -24,11 +26,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Healthcare Symptom Checker (Gemini)",
-    version="3.1",
+    version="3.2",
     lifespan=lifespan
 )
 
-# Allow frontend to access API
+# -----------------------------
+# FRONTEND SERVING
+# -----------------------------
+frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+frontend_dir = os.path.abspath(frontend_dir)
+
+app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+
+@app.get("/")
+def serve_frontend():
+    index_path = os.path.join(frontend_dir, "index.html")
+    return FileResponse(index_path)
+
+# -----------------------------
+# CORS MIDDLEWARE
+# -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,18 +58,15 @@ app.add_middleware(
 # HELPER — QUERY GEMINI
 # -----------------------------
 def query_gemini(model: str, system_prompt: str, user_prompt: str) -> str:
-    """
-    Query Google's Gemini model for structured JSON response.
-    """
-    api_key = os.getenv("AIzaSyCuN53iMBaKLfEKnHOSSvHb8sIaL_o31nQ")
+    api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="Missing GOOGLE_API_KEY environment variable.")
     
     genai.configure(api_key=api_key)
     try:
         full_prompt = f"{system_prompt}\n\nUser:\n{user_prompt}"
-        model = genai.GenerativeModel(model)
-        response = model.generate_content(full_prompt)
+        model_instance = genai.GenerativeModel(model)
+        response = model_instance.generate_content(full_prompt)
         return response.text
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini request failed: {str(e)}")
@@ -86,7 +100,6 @@ async def analyze(query: UserQuery, request: Request):
             metadata={"model": "gemini", "prompt_version": "v1"}
         )
 
-    # Construct user prompt
     user_prompt = USER_PROMPT_TEMPLATE.format(
         symptoms=sanitized_text,
         age=query.age if query.age is not None else "unknown",
@@ -94,7 +107,6 @@ async def analyze(query: UserQuery, request: Request):
         chronic=query.chronic_conditions or "none"
     )
 
-    # Explicitly ask for JSON output
     json_request = (
         "Return your answer strictly as valid JSON only, following the schema from the system prompt. "
         "Do not include any extra text or explanations outside the JSON block."
@@ -140,7 +152,6 @@ async def analyze(query: UserQuery, request: Request):
                 "metadata": {"model": "gemini", "prompt_version": "v1"}
             }
 
-    # Add metadata + save to DB
     data["metadata"]["timestamp"] = datetime.now(timezone.utc).isoformat()
     data["metadata"]["query_id"] = str(uuid.uuid4())
 
@@ -191,11 +202,3 @@ def clear_history():
         session.exec(delete(QueryHistory))
         session.commit()
     return {"message": "✅ History cleared"}
-
-# -----------------------------
-# ROOT ENDPOINT
-# -----------------------------
-@app.get("/")
-async def root():
-    return {"message": "Healthcare Symptom Checker (Gemini) is running ✅"}
-
