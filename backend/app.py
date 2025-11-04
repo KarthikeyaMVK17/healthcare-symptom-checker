@@ -44,7 +44,7 @@ def query_gemini(model: str, system_prompt: str, user_prompt: str) -> str:
     """
     Query Google's Gemini model for structured JSON response.
     """
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("AIzaSyCuN53iMBaKLfEKnHOSSvHb8sIaL_o31nQ")
     if not api_key:
         raise HTTPException(status_code=500, detail="Missing GOOGLE_API_KEY environment variable.")
     
@@ -198,3 +198,4 @@ def clear_history():
 @app.get("/")
 async def root():
     return {"message": "Healthcare Symptom Checker (Gemini) is running ✅"}
+
